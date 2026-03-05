@@ -1,0 +1,260 @@
+<UserControl x:Class="Mainframe.Views.OverviewView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             Background="{StaticResource BgBase}">
+    <DockPanel Margin="16">
+        <!-- date range, refresh -->
+        <Border DockPanel.Dock="Top" Margin="0,0,0,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="FROM" VerticalAlignment="Center"
+                           Margin="0,0,8,0" FontSize="11" FontFamily="Consolas"
+                           Foreground="{StaticResource TextSecondary}"/>
+                <DatePicker Grid.Column="1" SelectedDate="{Binding OverviewStartDate}"
+                            Width="150" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="2" Text="TO" VerticalAlignment="Center"
+                           Margin="16,0,8,0" FontSize="11" FontFamily="Consolas"
+                           Foreground="{StaticResource TextSecondary}"/>
+                <DatePicker Grid.Column="3" SelectedDate="{Binding OverviewEndDate}"
+                            Width="150" VerticalAlignment="Center"/>
+                <Button Grid.Column="4" Content="REFRESH" Command="{Binding RefreshOverviewCommand}"
+                        Margin="16,0,0,0" Padding="16,8" Background="{StaticResource BgElevated}"/>
+                <TextBlock Grid.Column="5" Text="NAME" VerticalAlignment="Center"
+                           Margin="16,0,8,0" FontSize="11" FontFamily="Consolas"
+                           Foreground="{StaticResource TextSecondary}"/>
+                <TextBox Grid.Column="6" Text="{Binding UserName, UpdateSourceTrigger=LostFocus}"
+                         Width="140" VerticalAlignment="Center"/>
+                <Button Grid.Column="7" Content="EXPORT XLSX" Command="{Binding ExportToExcelCommand}"
+                        Margin="8,0,0,0" Padding="16,8" Background="{StaticResource SuccessBrush}"/>
+
+                <TextBlock Grid.Column="9" Text="PERIOD TOTAL" FontSize="11"
+                           FontFamily="Consolas" Foreground="{StaticResource TextSecondary}"
+                           VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBlock Grid.Column="10" Text="{Binding OverviewTotalHours, StringFormat={}{0:F2} hrs}"
+                           FontSize="20" FontWeight="Bold" FontFamily="Consolas"
+                           Foreground="{StaticResource AccentBrush}"
+                           VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+
+                <!-- hrs by charge code -->
+                <TextBlock Text="HOURS BY CHARGE CODE" FontSize="13" FontWeight="Bold"
+                           Margin="0,0,0,8" Foreground="{StaticResource TextSecondary}"
+                           FontFamily="Consolas"/>
+                <ItemsControl ItemsSource="{Binding ChargeCodeSummaries}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{StaticResource BgSurface}" CornerRadius="4"
+                                    Margin="0,0,0,4" Padding="12,8"
+                                    BorderBrush="{StaticResource BorderSubtle}" BorderThickness="1">
+                                <StackPanel>
+                                    <Grid>
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                   FontSize="13" Foreground="{StaticResource TextPrimary}"/>
+                                        <TextBlock Text="{Binding TotalHours, StringFormat={}{0:F2} hrs}"
+                                                   HorizontalAlignment="Right" FontWeight="Bold"
+                                                   Foreground="{StaticResource AccentBrush}"
+                                                   FontFamily="Consolas"/>
+                                    </Grid>
+                                    <ItemsControl ItemsSource="{Binding Projects}" Margin="16,4,0,0">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,2">
+                                                    <TextBlock Text="{Binding Name}"
+                                                               Foreground="{StaticResource TextSecondary}"/>
+                                                    <TextBlock Text="{Binding TotalHours, StringFormat={}{0:F2} hrs}"
+                                                               HorizontalAlignment="Right"
+                                                               Foreground="{StaticResource TextMuted}"
+                                                               FontFamily="Consolas"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Text="No charge code data for this period."
+                           Foreground="{StaticResource TextMuted}" FontStyle="Italic"
+                           Margin="8,4,0,16" FontFamily="Consolas" FontSize="12">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ChargeCodeSummaries.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <!-- hrs by project -->
+                <TextBlock Text="HOURS BY PROJECT" FontSize="13" FontWeight="Bold"
+                           Margin="0,12,0,8" Foreground="{StaticResource TextSecondary}"
+                           FontFamily="Consolas"/>
+                <ItemsControl ItemsSource="{Binding ProjectSummaries}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{StaticResource BgSurface}" CornerRadius="4"
+                                    Margin="0,0,0,4" Padding="12,8"
+                                    BorderBrush="{StaticResource BorderSubtle}" BorderThickness="1">
+                                <StackPanel>
+                                    <Grid>
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                   FontSize="13" Foreground="{StaticResource TextPrimary}"/>
+                                        <TextBlock Text="{Binding TotalHours, StringFormat={}{0:F2} hrs}"
+                                                   HorizontalAlignment="Right" FontWeight="Bold"
+                                                   Foreground="{StaticResource AccentBrush}"
+                                                   FontFamily="Consolas"/>
+                                    </Grid>
+                                    <ItemsControl ItemsSource="{Binding Tasks}" Margin="16,4,0,0">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel>
+                                                    <Grid Margin="0,2">
+                                                        <TextBlock Text="{Binding Name}"
+                                                                   Foreground="{StaticResource TextSecondary}"/>
+                                                        <TextBlock Text="{Binding TotalHours, StringFormat={}{0:F2} hrs}"
+                                                                   HorizontalAlignment="Right"
+                                                                   Foreground="{StaticResource TextSecondary}"
+                                                                   FontFamily="Consolas"/>
+                                                    </Grid>
+                                                    <ItemsControl ItemsSource="{Binding Subtasks}" Margin="16,0,0,0">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Grid Margin="0,1">
+                                                                    <TextBlock Text="{Binding Name}"
+                                                                               Foreground="{StaticResource TextMuted}"/>
+                                                                    <TextBlock Text="{Binding TotalHours, StringFormat={}{0:F2} hrs}"
+                                                                               HorizontalAlignment="Right"
+                                                                               Foreground="{StaticResource TextMuted}"
+                                                                               FontFamily="Consolas"/>
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Text="No project data for this period."
+                           Foreground="{StaticResource TextMuted}" FontStyle="Italic"
+                           Margin="8,4,0,16" FontFamily="Consolas" FontSize="12">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ProjectSummaries.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <!-- daily -->
+                <TextBlock Text="DAILY BREAKDOWN" FontSize="13" FontWeight="Bold"
+                           Margin="0,12,0,8" Foreground="{StaticResource TextSecondary}"
+                           FontFamily="Consolas"/>
+                <ItemsControl ItemsSource="{Binding DailySummaries}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{StaticResource BgSurface}" CornerRadius="4"
+                                    Margin="0,0,0,6" Padding="12,8"
+                                    BorderBrush="{StaticResource BorderSubtle}" BorderThickness="1">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,4">
+                                        <TextBlock Text="{Binding DisplayDate}"
+                                                   FontWeight="SemiBold" FontSize="13"
+                                                   Foreground="{StaticResource TextPrimary}"
+                                                   FontFamily="Consolas"/>
+                                        <TextBlock Text="{Binding TotalHours, StringFormat={}{0:F2} hrs}"
+                                                   HorizontalAlignment="Right" FontWeight="Bold"
+                                                   Foreground="{StaticResource AccentBrush}"
+                                                   FontFamily="Consolas"/>
+                                    </Grid>
+                                    <ItemsControl ItemsSource="{Binding Entries}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="8,2,0,2">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="70"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{Binding ChargeCode}"
+                                                               Foreground="{StaticResource TextSecondary}" FontSize="12"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding Project}"
+                                                               Foreground="{StaticResource TextSecondary}" FontSize="12"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding Task}"
+                                                               Foreground="{StaticResource TextMuted}" FontSize="12"/>
+                                                    <TextBlock Grid.Column="3" Text="{Binding Subtask}"
+                                                               Foreground="{StaticResource TextMuted}" FontSize="12"/>
+                                                    <TextBlock Grid.Column="4"
+                                                               Text="{Binding Hours, StringFormat={}{0:F2}}"
+                                                               Foreground="{StaticResource AccentBrush}" FontSize="12"
+                                                               FontFamily="Consolas"
+                                                               TextAlignment="Right" Margin="0,0,8,0"/>
+                                                    <TextBlock Grid.Column="5" Text="{Binding Notes}"
+                                                               Foreground="{StaticResource TextMuted}" FontSize="12"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Text="No daily data for this period."
+                           Foreground="{StaticResource TextMuted}" FontStyle="Italic"
+                           Margin="8,4,0,0" FontFamily="Consolas" FontSize="12">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding DailySummaries.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

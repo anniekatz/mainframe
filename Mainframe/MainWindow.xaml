@@ -1,0 +1,51 @@
+<Window x:Class="Mainframe.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:Mainframe.Views"
+        mc:Ignorable="d"
+        Title="Mainframe - Time Tracker" Height="700" Width="1100"
+        MinHeight="500" MinWidth="800"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource BgBase}">
+    <DockPanel>
+        <!-- header -->
+        <Border DockPanel.Dock="Top" Background="{StaticResource BgDeep}"
+                Padding="20,12" BorderBrush="{StaticResource BorderSubtle}"
+                BorderThickness="0,0,0,1">
+            <Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="MAINFRAME" FontSize="18" FontWeight="Bold"
+                               Foreground="{StaticResource AccentBrush}"
+                               FontFamily="Consolas" VerticalAlignment="Center"/>
+                    <Border Background="{StaticResource AccentBrush}" CornerRadius="2"
+                            Padding="6,2" Margin="12,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="v1.0" FontSize="10" Foreground="White"
+                                   FontFamily="Consolas"/>
+                    </Border>
+                </StackPanel>
+                <TextBlock Text="TIME TRACKING SYSTEM" FontSize="11"
+                           Foreground="{StaticResource TextMuted}"
+                           VerticalAlignment="Center" HorizontalAlignment="Right"
+                           FontFamily="Consolas"/>
+            </Grid>
+        </Border>
+
+        <!-- tab bg -->
+        <Border DockPanel.Dock="Top" Background="{StaticResource BgDeep}"
+                BorderBrush="{StaticResource BorderSubtle}" BorderThickness="0,0,0,1">
+            <TabControl x:Name="MainTabs" Background="Transparent" BorderThickness="0" Padding="0">
+                <TabItem Header="DAILY ENTRY">
+                    <views:DailyEntryView DataContext="{Binding}"/>
+                </TabItem>
+                <TabItem Header="OVERVIEW">
+                    <views:OverviewView DataContext="{Binding}"/>
+                </TabItem>
+                <TabItem Header="MANAGE">
+                    <views:ManageView DataContext="{Binding}"/>
+                </TabItem>
+            </TabControl>
+        </Border>
+    </DockPanel>
+</Window>
