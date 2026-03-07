@@ -9,6 +9,9 @@
         MinHeight="500" MinWidth="800"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource BgBase}">
+    <Window.InputBindings>
+        <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveDailyCommand}"/>
+    </Window.InputBindings>
     <DockPanel>
         <!-- header -->
         <Border DockPanel.Dock="Top" Background="{StaticResource BgDeep}"
