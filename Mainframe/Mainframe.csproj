@@ -11,6 +11,15 @@
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <DebugType>embedded</DebugType>
+    <Configurations>Debug;Release;Release_Portable</Configurations>
+  </PropertyGroup>
+
+  <!-- Portable release: stores mainframe.db and the default TaskingSheets folder next
+       to the executable instead of in the user's AppData / Documents. Behaves like
+       Release in every other way. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release_Portable'">
+    <Optimize>true</Optimize>
+    <DefineConstants>$(DefineConstants);PORTABLE</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,6 +29,10 @@
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Properties\PublishProfiles\" />
   </ItemGroup>
 
 </Project>

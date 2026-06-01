@@ -1,7 +1,9 @@
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Interop;
 using Mainframe.ViewModels;
+using Mainframe.Views;
 
 namespace Mainframe;
 
@@ -16,6 +18,15 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = new MainViewModel();
+
+#if !PORTABLE
+        MainTabs.Items.Add(new TabItem
+        {
+            Header = "SETTINGS",
+            Content = new SettingsView()
+        });
+#endif
+
         Loaded += OnLoaded;
         Closed += OnClosed;
     }

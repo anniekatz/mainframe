@@ -24,13 +24,15 @@ public class MainViewModel : BaseViewModel, IDisposable
             ? Environment.UserName
             : _appData.UserName;
 
-        // export location: fallsback to the Documents default
+#if !PORTABLE
+        // exports default location in user's documents/TaskingSheets
         _exportBaseDirectory = string.IsNullOrWhiteSpace(_appData.ExportBaseDirectory)
             ? DefaultExportBaseDirectory
             : _appData.ExportBaseDirectory;
         _exportFolderName = string.IsNullOrWhiteSpace(_appData.ExportFolderName)
             ? DefaultExportFolderName
             : _appData.ExportFolderName;
+#endif
 
         // daily entry today by default
         _selectedDate = DateTime.Today;
@@ -57,12 +59,13 @@ public class MainViewModel : BaseViewModel, IDisposable
         SaveDailyCommand = new RelayCommand(SaveDaily);
 
         // overview tab commands
-        RefreshOverviewCommand = new RelayCommand(RefreshOverview);
         ExportToExcelCommand = new RelayCommand(ExportToExcel);
 
+#if !PORTABLE
         // settings tab commands
         BrowseExportDirectoryCommand = new RelayCommand(BrowseExportDirectory);
         ResetExportLocationCommand = new RelayCommand(ResetExportLocation);
+#endif
 
         // manage tab commands
         AddChargeCodeCommand = new RelayCommand(AddChargeCode, () => !string.IsNullOrWhiteSpace(NewChargeCodeCode));
@@ -98,9 +101,15 @@ public class MainViewModel : BaseViewModel, IDisposable
 
     // settings props (tasking sheet save location)
 
+    private const string DefaultExportFolderName = "TaskingSheets";
+
+#if PORTABLE
+    // portable build: exports in TaskingSheets folder next to executable
+    public string EffectiveExportDirectory =>
+        Path.Combine(AppContext.BaseDirectory, DefaultExportFolderName);
+#else
     private static string DefaultExportBaseDirectory =>
         Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-    private const string DefaultExportFolderName = "TaskingSheets";
 
     private string _exportBaseDirectory;
     public string ExportBaseDirectory
@@ -162,6 +171,7 @@ public class MainViewModel : BaseViewModel, IDisposable
         ExportBaseDirectory = DefaultExportBaseDirectory;
         ExportFolderName = DefaultExportFolderName;
     }
+#endif
 
     //daily entry props
     private DateTime _selectedDate;
@@ -333,14 +343,23 @@ public class MainViewModel : BaseViewModel, IDisposable
     public DateTime OverviewStartDate
     {
         get => _overviewStartDate;
-        set => SetProperty(ref _overviewStartDate, value);
+        set
+        {
+            // refresh when range changes
+            if (SetProperty(ref _overviewStartDate, value))
+                RefreshOverview();
+        }
     }
 
     private DateTime _overviewEndDate;
     public DateTime OverviewEndDate
     {
         get => _overviewEndDate;
-        set => SetProperty(ref _overviewEndDate, value);
+        set
+        {
+            if (SetProperty(ref _overviewEndDate, value))
+                RefreshOverview();
+        }
     }
 
     private decimal _overviewTotalHours;
@@ -354,7 +373,6 @@ public class MainViewModel : BaseViewModel, IDisposable
     public ObservableCollection<ProjectSummary> ProjectSummaries { get; }
     public ObservableCollection<DailySummary> DailySummaries { get; }
 
-    public ICommand RefreshOverviewCommand { get; }
     public ICommand ExportToExcelCommand { get; }
 
     private void ExportToExcel()
@@ -441,7 +459,7 @@ public class MainViewModel : BaseViewModel, IDisposable
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
-    private void RefreshOverview()
+    public void RefreshOverview()
     {
         var startDate = DateOnly.FromDateTime(OverviewStartDate);
         var endDate = DateOnly.FromDateTime(OverviewEndDate);

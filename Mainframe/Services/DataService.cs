@@ -7,12 +7,17 @@ namespace Mainframe.Services;
 
 public class DataService : IDisposable
 {
-    private static readonly string DataDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Mainframe");
+    private static readonly string DataDir =
+#if PORTABLE
+        // portable build: keep the database next to the exe
+        AppContext.BaseDirectory;
+#else
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Mainframe");
+#endif
 
     private static readonly string DbFile = Path.Combine(DataDir, "mainframe.db");
-    //private static readonly string LegacyJsonFile = Path.Combine(DataDir, "data.json");
 
     private readonly SqliteConnection _connection;
 
