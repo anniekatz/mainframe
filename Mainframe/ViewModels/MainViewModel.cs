@@ -112,11 +112,34 @@ public class MainViewModel : BaseViewModel, IDisposable
         set => SetProperty(ref _dailyStatusMessage, value);
     }
 
+    private string _dailyStatusError = "";
+    public string DailyStatusError
+    {
+        get => _dailyStatusError;
+        set => SetProperty(ref _dailyStatusError, value);
+    }
+
+    private string _dailyStatusWarning = "";
+    public string DailyStatusWarning
+    {
+        get => _dailyStatusWarning;
+        set => SetProperty(ref _dailyStatusWarning, value);
+    }
+
     public ICommand AddDailyEntryCommand { get; }
     public ICommand RemoveDailyEntryCommand { get; }
     public ICommand SaveDailyCommand { get; }
 
     private void LoadDay()
+    {
+        ReloadDailyRows();
+        DailyStatusMessage = "";
+        DailyStatusError = "";
+        DailyStatusWarning = "";
+    }
+
+    // rebuild the rows from saved data
+    private void ReloadDailyRows()
     {
         DailyEntries.Clear();
         var date = DateOnly.FromDateTime(SelectedDate);
@@ -131,7 +154,6 @@ public class MainViewModel : BaseViewModel, IDisposable
         }
 
         RecalcDailyTotal();
-        DailyStatusMessage = "";
     }
 
     private void AddDailyEntry()
@@ -157,18 +179,68 @@ public class MainViewModel : BaseViewModel, IDisposable
     {
         var date = DateOnly.FromDateTime(SelectedDate);
 
-        _appData.TimeEntries.RemoveAll(e => e.Date == date);
+        // only requirement: charge code (holidays, pto, etc.)
+        var toSave = DailyEntries.Where(row => row.SelectedChargeCode != null).ToList();
+        var missing = DailyEntries.Where(row => row.SelectedChargeCode == null).ToList();
+        var skipped = missing.Count;
 
-        foreach (var row in DailyEntries)
+        // flag rows w no charge code for a red border. clear it on the rest
+        foreach (var row in missing)
+            row.ChargeCodeMissing = true;
+        foreach (var row in toSave)
+            row.ChargeCodeMissing = false;
+
+        if (toSave.Count == 0 && skipped > 0)
         {
-            if (row.SelectedChargeCode == null || row.SelectedProject == null)
-                continue;
-
-            _appData.TimeEntries.Add(row.ToTimeEntry(date));
+            DailyStatusMessage = "";
+            DailyStatusWarning = "";
+            DailyStatusError = skipped == 1
+                ? "Not saved: the entry needs a charge code."
+                : $"Not saved: {skipped} entries each need a charge code.";
+            return;
         }
 
-        PersistData();
-        DailyStatusMessage = $"Saved {DailyEntries.Count} entries for {SelectedDate:d}";
+        _appData.TimeEntries.RemoveAll(e => e.Date == date);
+
+        foreach (var row in toSave)
+            _appData.TimeEntries.Add(row.ToTimeEntry(date));
+
+        // report success unless db committed
+        try
+        {
+            PersistData();
+        }
+        catch (Exception ex)
+        {
+            DailyStatusMessage = "";
+            DailyStatusWarning = "";
+            DailyStatusError = $"Save failed: {ex.Message}";
+            return;
+        }
+
+        DailyStatusMessage = $"Saved {toSave.Count} entries for {SelectedDate:d}";
+
+        // skipped rows (no charge code): not saved at all
+        DailyStatusError = skipped switch
+        {
+            0 => "",
+            1 => "1 entry skipped: no charge code",
+            _ => $"{skipped} entries skipped: no charge code"
+        };
+
+        // hours couldn't be parsed: saved as 0.00 with wrning
+        var invalidHours = toSave.Count(row => row.HoursInvalid);
+        DailyStatusWarning = invalidHours switch
+        {
+            0 => "",
+            1 => "1 entry had invalid hours, saved as 0.00",
+            _ => $"{invalidHours} entries had invalid hours, saved as 0.00"
+        };
+
+        // refresh saved rows to mirror what was persisted
+        // rows with no charge code are left in place but red border added so the user can fix them
+        foreach (var row in toSave)
+            row.SyncHoursText();
     }
 
     private void RecalcDailyTotal()

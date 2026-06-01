@@ -13,6 +13,9 @@ public class TimeEntryRowViewModel : BaseViewModel
     private ProjectTask? _selectedTask;
     private Subtask? _selectedSubtask;
     private decimal _hours;
+    private string _hoursText = "0.00";
+    private bool _hoursInvalid;
+    private bool _chargeCodeMissing;
     private string _notes = "";
 
     public TimeEntryRowViewModel(
@@ -31,7 +34,11 @@ public class TimeEntryRowViewModel : BaseViewModel
     public ChargeCode? SelectedChargeCode
     {
         get => _selectedChargeCode;
-        set => SetProperty(ref _selectedChargeCode, value);
+        set
+        {
+            if (SetProperty(ref _selectedChargeCode, value) && value != null)
+                ChargeCodeMissing = false;
+        }
     }
 
     public Project? SelectedProject
@@ -66,6 +73,7 @@ public class TimeEntryRowViewModel : BaseViewModel
         set => SetProperty(ref _selectedSubtask, value);
     }
 
+    // parsed hours value
     public decimal Hours
     {
         get => _hours;
@@ -75,6 +83,63 @@ public class TimeEntryRowViewModel : BaseViewModel
                 HoursChanged?.Invoke();
         }
     }
+
+    // invalid hours set to 0 and produce warning to user
+    public string HoursText
+    {
+        get => _hoursText;
+        set
+        {
+            if (!SetProperty(ref _hoursText, value))
+                return;
+
+            var trimmed = value?.Trim() ?? "";
+
+            if (trimmed.Length == 0)
+            {
+                HoursInvalid = false;
+                SetHoursAndNormalize(0m);
+            }
+            else if (decimal.TryParse(trimmed, out var parsed))
+            {
+                HoursInvalid = false;
+                SetHoursAndNormalize(parsed);
+            }
+            else
+            {
+                HoursInvalid = true;
+                Hours = 0m; 
+            }
+        }
+    }
+
+    public bool HoursInvalid
+    {
+        get => _hoursInvalid;
+        private set => SetProperty(ref _hoursInvalid, value);
+    }
+
+    private void SetHoursAndNormalize(decimal value)
+    {
+        Hours = value;
+
+        var formatted = value.ToString("F2");
+        if (!string.Equals(formatted, _hoursText, StringComparison.Ordinal))
+        {
+            _hoursText = formatted;
+            OnPropertyChanged(nameof(HoursText));
+        }
+    }
+
+    // need to know if charge code missing so can broder red if user attempts save
+    public bool ChargeCodeMissing
+    {
+        get => _chargeCodeMissing;
+        set => SetProperty(ref _chargeCodeMissing, value);
+    }
+
+    // clears invalid flag after save
+    public void SyncHoursText() => HoursText = Hours.ToString("F2");
 
     public string Notes
     {
@@ -131,6 +196,7 @@ public class TimeEntryRowViewModel : BaseViewModel
         }
 
         vm._hours = entry.Hours;
+        vm._hoursText = entry.Hours.ToString("F2");
         vm._notes = entry.Notes;
         return vm;
     }
