@@ -33,6 +33,7 @@
         <SolidColorBrush x:Key="TextMuted" Color="#6a6a88"/>
         <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
         <SolidColorBrush x:Key="SuccessBrush" Color="#43b581"/>
+        <SolidColorBrush x:Key="WarningBrush" Color="#f0ad4e"/>
         <SolidColorBrush x:Key="DangerBrush" Color="#f04747"/>
 
         <Style TargetType="Button">

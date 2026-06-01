@@ -1,3 +1,9 @@
 <Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+    <BuildType Name="Release_Portable" />
+  </Configurations>
   <Project Path="Mainframe/Mainframe.csproj" />
 </Solution>

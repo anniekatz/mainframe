@@ -7,12 +7,17 @@ namespace Mainframe.Services;
 
 public class DataService : IDisposable
 {
-    private static readonly string DataDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Mainframe");
+    private static readonly string DataDir =
+#if PORTABLE
+        // portable build: keep the database next to the exe
+        AppContext.BaseDirectory;
+#else
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Mainframe");
+#endif
 
     private static readonly string DbFile = Path.Combine(DataDir, "mainframe.db");
-    //private static readonly string LegacyJsonFile = Path.Combine(DataDir, "data.json");
 
     private readonly SqliteConnection _connection;
 
@@ -39,6 +44,22 @@ public class DataService : IDisposable
             var result = cmd.ExecuteScalar();
             if (result is string userName)
                 data.UserName = userName;
+        }
+
+        using (var cmd = _connection.CreateCommand())
+        {
+            cmd.CommandText = "SELECT Value FROM Settings WHERE Key = 'ExportBaseDirectory'";
+            var result = cmd.ExecuteScalar();
+            if (result is string exportBaseDir)
+                data.ExportBaseDirectory = exportBaseDir;
+        }
+
+        using (var cmd = _connection.CreateCommand())
+        {
+            cmd.CommandText = "SELECT Value FROM Settings WHERE Key = 'ExportFolderName'";
+            var result = cmd.ExecuteScalar();
+            if (result is string exportFolderName && !string.IsNullOrWhiteSpace(exportFolderName))
+                data.ExportFolderName = exportFolderName;
         }
 
         using (var cmd = _connection.CreateCommand())
@@ -154,6 +175,22 @@ public class DataService : IDisposable
             cmd.Transaction = transaction;
             cmd.CommandText = "INSERT OR REPLACE INTO Settings (Key, Value) VALUES ('UserName', @value)";
             cmd.Parameters.AddWithValue("@value", data.UserName);
+            cmd.ExecuteNonQuery();
+        }
+
+        using (var cmd = _connection.CreateCommand())
+        {
+            cmd.Transaction = transaction;
+            cmd.CommandText = "INSERT OR REPLACE INTO Settings (Key, Value) VALUES ('ExportBaseDirectory', @value)";
+            cmd.Parameters.AddWithValue("@value", data.ExportBaseDirectory);
+            cmd.ExecuteNonQuery();
+        }
+
+        using (var cmd = _connection.CreateCommand())
+        {
+            cmd.Transaction = transaction;
+            cmd.CommandText = "INSERT OR REPLACE INTO Settings (Key, Value) VALUES ('ExportFolderName', @value)";
+            cmd.Parameters.AddWithValue("@value", data.ExportFolderName);
             cmd.ExecuteNonQuery();
         }
 

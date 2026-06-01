@@ -24,6 +24,16 @@ public class MainViewModel : BaseViewModel, IDisposable
             ? Environment.UserName
             : _appData.UserName;
 
+#if !PORTABLE
+        // exports default location in user's documents/TaskingSheets
+        _exportBaseDirectory = string.IsNullOrWhiteSpace(_appData.ExportBaseDirectory)
+            ? DefaultExportBaseDirectory
+            : _appData.ExportBaseDirectory;
+        _exportFolderName = string.IsNullOrWhiteSpace(_appData.ExportFolderName)
+            ? DefaultExportFolderName
+            : _appData.ExportFolderName;
+#endif
+
         // daily entry today by default
         _selectedDate = DateTime.Today;
         DailyEntries = [];
@@ -49,8 +59,13 @@ public class MainViewModel : BaseViewModel, IDisposable
         SaveDailyCommand = new RelayCommand(SaveDaily);
 
         // overview tab commands
-        RefreshOverviewCommand = new RelayCommand(RefreshOverview);
         ExportToExcelCommand = new RelayCommand(ExportToExcel);
+
+#if !PORTABLE
+        // settings tab commands
+        BrowseExportDirectoryCommand = new RelayCommand(BrowseExportDirectory);
+        ResetExportLocationCommand = new RelayCommand(ResetExportLocation);
+#endif
 
         // manage tab commands
         AddChargeCodeCommand = new RelayCommand(AddChargeCode, () => !string.IsNullOrWhiteSpace(NewChargeCodeCode));
@@ -84,6 +99,80 @@ public class MainViewModel : BaseViewModel, IDisposable
         }
     }
 
+    // settings props (tasking sheet save location)
+
+    private const string DefaultExportFolderName = "TaskingSheets";
+
+#if PORTABLE
+    // portable build: exports in TaskingSheets folder next to executable
+    public string EffectiveExportDirectory =>
+        Path.Combine(AppContext.BaseDirectory, DefaultExportFolderName);
+#else
+    private static string DefaultExportBaseDirectory =>
+        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+    private string _exportBaseDirectory;
+    public string ExportBaseDirectory
+    {
+        get => _exportBaseDirectory;
+        set
+        {
+            var dir = string.IsNullOrWhiteSpace(value) ? DefaultExportBaseDirectory : value.Trim();
+            if (SetProperty(ref _exportBaseDirectory, dir))
+            {
+                _appData.ExportBaseDirectory = dir;
+                PersistData();
+                OnPropertyChanged(nameof(EffectiveExportDirectory));
+            }
+        }
+    }
+
+    private string _exportFolderName;
+    public string ExportFolderName
+    {
+        get => _exportFolderName;
+        set
+        {
+            // validate folder name
+            var cleaned = new string((value ?? "")
+                .Where(c => !Path.GetInvalidFileNameChars().Contains(c))
+                .ToArray()).Trim();
+            var name = string.IsNullOrWhiteSpace(cleaned) ? DefaultExportFolderName : cleaned;
+            if (SetProperty(ref _exportFolderName, name))
+            {
+                _appData.ExportFolderName = name;
+                PersistData();
+                OnPropertyChanged(nameof(EffectiveExportDirectory));
+            }
+        }
+    }
+
+    public string EffectiveExportDirectory => Path.Combine(_exportBaseDirectory, _exportFolderName);
+
+    public ICommand BrowseExportDirectoryCommand { get; }
+    public ICommand ResetExportLocationCommand { get; }
+
+    private void BrowseExportDirectory()
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = "Select the base folder for tasking sheets",
+            InitialDirectory = Directory.Exists(_exportBaseDirectory)
+                ? _exportBaseDirectory
+                : DefaultExportBaseDirectory
+        };
+
+        if (dialog.ShowDialog() == true)
+            ExportBaseDirectory = dialog.FolderName;
+    }
+
+    private void ResetExportLocation()
+    {
+        ExportBaseDirectory = DefaultExportBaseDirectory;
+        ExportFolderName = DefaultExportFolderName;
+    }
+#endif
+
     //daily entry props
     private DateTime _selectedDate;
     public DateTime SelectedDate
@@ -112,11 +201,34 @@ public class MainViewModel : BaseViewModel, IDisposable
         set => SetProperty(ref _dailyStatusMessage, value);
     }
 
+    private string _dailyStatusError = "";
+    public string DailyStatusError
+    {
+        get => _dailyStatusError;
+        set => SetProperty(ref _dailyStatusError, value);
+    }
+
+    private string _dailyStatusWarning = "";
+    public string DailyStatusWarning
+    {
+        get => _dailyStatusWarning;
+        set => SetProperty(ref _dailyStatusWarning, value);
+    }
+
     public ICommand AddDailyEntryCommand { get; }
     public ICommand RemoveDailyEntryCommand { get; }
     public ICommand SaveDailyCommand { get; }
 
     private void LoadDay()
+    {
+        ReloadDailyRows();
+        DailyStatusMessage = "";
+        DailyStatusError = "";
+        DailyStatusWarning = "";
+    }
+
+    // rebuild the rows from saved data
+    private void ReloadDailyRows()
     {
         DailyEntries.Clear();
         var date = DateOnly.FromDateTime(SelectedDate);
@@ -131,7 +243,6 @@ public class MainViewModel : BaseViewModel, IDisposable
         }
 
         RecalcDailyTotal();
-        DailyStatusMessage = "";
     }
 
     private void AddDailyEntry()
@@ -157,18 +268,68 @@ public class MainViewModel : BaseViewModel, IDisposable
     {
         var date = DateOnly.FromDateTime(SelectedDate);
 
-        _appData.TimeEntries.RemoveAll(e => e.Date == date);
+        // only requirement: charge code (holidays, pto, etc.)
+        var toSave = DailyEntries.Where(row => row.SelectedChargeCode != null).ToList();
+        var missing = DailyEntries.Where(row => row.SelectedChargeCode == null).ToList();
+        var skipped = missing.Count;
 
-        foreach (var row in DailyEntries)
+        // flag rows w no charge code for a red border. clear it on the rest
+        foreach (var row in missing)
+            row.ChargeCodeMissing = true;
+        foreach (var row in toSave)
+            row.ChargeCodeMissing = false;
+
+        if (toSave.Count == 0 && skipped > 0)
         {
-            if (row.SelectedChargeCode == null || row.SelectedProject == null)
-                continue;
-
-            _appData.TimeEntries.Add(row.ToTimeEntry(date));
+            DailyStatusMessage = "";
+            DailyStatusWarning = "";
+            DailyStatusError = skipped == 1
+                ? "Not saved: the entry needs a charge code."
+                : $"Not saved: {skipped} entries each need a charge code.";
+            return;
         }
 
-        PersistData();
-        DailyStatusMessage = $"Saved {DailyEntries.Count} entries for {SelectedDate:d}";
+        _appData.TimeEntries.RemoveAll(e => e.Date == date);
+
+        foreach (var row in toSave)
+            _appData.TimeEntries.Add(row.ToTimeEntry(date));
+
+        // report success unless db committed
+        try
+        {
+            PersistData();
+        }
+        catch (Exception ex)
+        {
+            DailyStatusMessage = "";
+            DailyStatusWarning = "";
+            DailyStatusError = $"Save failed: {ex.Message}";
+            return;
+        }
+
+        DailyStatusMessage = $"Saved {toSave.Count} entries for {SelectedDate:d}";
+
+        // skipped rows (no charge code): not saved at all
+        DailyStatusError = skipped switch
+        {
+            0 => "",
+            1 => "1 entry skipped: no charge code",
+            _ => $"{skipped} entries skipped: no charge code"
+        };
+
+        // hours couldn't be parsed: saved as 0.00 with wrning
+        var invalidHours = toSave.Count(row => row.HoursInvalid);
+        DailyStatusWarning = invalidHours switch
+        {
+            0 => "",
+            1 => "1 entry had invalid hours, saved as 0.00",
+            _ => $"{invalidHours} entries had invalid hours, saved as 0.00"
+        };
+
+        // refresh saved rows to mirror what was persisted
+        // rows with no charge code are left in place but red border added so the user can fix them
+        foreach (var row in toSave)
+            row.SyncHoursText();
     }
 
     private void RecalcDailyTotal()
@@ -182,14 +343,23 @@ public class MainViewModel : BaseViewModel, IDisposable
     public DateTime OverviewStartDate
     {
         get => _overviewStartDate;
-        set => SetProperty(ref _overviewStartDate, value);
+        set
+        {
+            // refresh when range changes
+            if (SetProperty(ref _overviewStartDate, value))
+                RefreshOverview();
+        }
     }
 
     private DateTime _overviewEndDate;
     public DateTime OverviewEndDate
     {
         get => _overviewEndDate;
-        set => SetProperty(ref _overviewEndDate, value);
+        set
+        {
+            if (SetProperty(ref _overviewEndDate, value))
+                RefreshOverview();
+        }
     }
 
     private decimal _overviewTotalHours;
@@ -203,7 +373,6 @@ public class MainViewModel : BaseViewModel, IDisposable
     public ObservableCollection<ProjectSummary> ProjectSummaries { get; }
     public ObservableCollection<DailySummary> DailySummaries { get; }
 
-    public ICommand RefreshOverviewCommand { get; }
     public ICommand ExportToExcelCommand { get; }
 
     private void ExportToExcel()
@@ -221,7 +390,7 @@ public class MainViewModel : BaseViewModel, IDisposable
         var endDate = DateOnly.FromDateTime(OverviewEndDate);
 
         var namePart = string.IsNullOrWhiteSpace(UserName) ? "" : $"_{UserName.Trim().Replace(" ", "_")}";
-        var exportDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "TaskingSheets");
+        var exportDir = EffectiveExportDirectory;
         Directory.CreateDirectory(exportDir);
         var dialog = new SaveFileDialog
         {
@@ -290,7 +459,7 @@ public class MainViewModel : BaseViewModel, IDisposable
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
-    private void RefreshOverview()
+    public void RefreshOverview()
     {
         var startDate = DateOnly.FromDateTime(OverviewStartDate);
         var endDate = DateOnly.FromDateTime(OverviewEndDate);

@@ -48,6 +48,7 @@
                 <TabItem Header="MANAGE">
                     <views:ManageView DataContext="{Binding}"/>
                 </TabItem>
+                <!-- SETTINGS tab added in code-behind .cs for non-portable builds onl -->
             </TabControl>
         </Border>
     </DockPanel>

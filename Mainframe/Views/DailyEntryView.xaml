@@ -79,9 +79,47 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Column="0" Text="{Binding DailyStatusMessage}"
-                           VerticalAlignment="Center" Foreground="{StaticResource SuccessBrush}"
-                           FontStyle="Italic" FontFamily="Consolas" FontSize="12"/>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding DailyStatusMessage}"
+                               Foreground="{StaticResource SuccessBrush}"
+                               FontStyle="Italic" FontFamily="Consolas" FontSize="12">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding DailyStatusMessage}" Value="">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock Text="{Binding DailyStatusWarning}"
+                               Foreground="{StaticResource WarningBrush}"
+                               FontStyle="Italic" FontFamily="Consolas" FontSize="12">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding DailyStatusWarning}" Value="">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock Text="{Binding DailyStatusError}"
+                               Foreground="{StaticResource DangerBrush}"
+                               FontStyle="Italic" FontFamily="Consolas" FontSize="12">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding DailyStatusError}" Value="">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <Button Content="+ ADD ENTRY" Command="{Binding AddDailyEntryCommand}"
@@ -97,8 +135,19 @@
             <ItemsControl ItemsSource="{Binding DailyEntries}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border BorderBrush="{StaticResource BorderSubtle}"
-                                BorderThickness="0,0,0,1" Padding="4,6">
+                        <Border Padding="4,6">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="BorderBrush" Value="{StaticResource BorderSubtle}"/>
+                                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ChargeCodeMissing}" Value="True">
+                                            <Setter Property="BorderBrush" Value="{StaticResource DangerBrush}"/>
+                                            <Setter Property="BorderThickness" Value="1"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -139,7 +188,7 @@
                                           Margin="2" VerticalAlignment="Center"/>
 
                                 <TextBox Grid.Column="4"
-                                         Text="{Binding Hours, StringFormat=F2}"
+                                         Text="{Binding HoursText}"
                                          Margin="2" VerticalAlignment="Center"
                                          TextAlignment="Right" Padding="4,4"
                                          GotKeyboardFocus="HoursTextBox_GotKeyboardFocus"
