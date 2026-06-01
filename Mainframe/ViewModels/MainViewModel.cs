@@ -24,6 +24,14 @@ public class MainViewModel : BaseViewModel, IDisposable
             ? Environment.UserName
             : _appData.UserName;
 
+        // export location: fallsback to the Documents default
+        _exportBaseDirectory = string.IsNullOrWhiteSpace(_appData.ExportBaseDirectory)
+            ? DefaultExportBaseDirectory
+            : _appData.ExportBaseDirectory;
+        _exportFolderName = string.IsNullOrWhiteSpace(_appData.ExportFolderName)
+            ? DefaultExportFolderName
+            : _appData.ExportFolderName;
+
         // daily entry today by default
         _selectedDate = DateTime.Today;
         DailyEntries = [];
@@ -51,6 +59,10 @@ public class MainViewModel : BaseViewModel, IDisposable
         // overview tab commands
         RefreshOverviewCommand = new RelayCommand(RefreshOverview);
         ExportToExcelCommand = new RelayCommand(ExportToExcel);
+
+        // settings tab commands
+        BrowseExportDirectoryCommand = new RelayCommand(BrowseExportDirectory);
+        ResetExportLocationCommand = new RelayCommand(ResetExportLocation);
 
         // manage tab commands
         AddChargeCodeCommand = new RelayCommand(AddChargeCode, () => !string.IsNullOrWhiteSpace(NewChargeCodeCode));
@@ -82,6 +94,73 @@ public class MainViewModel : BaseViewModel, IDisposable
                 PersistData();
             }
         }
+    }
+
+    // settings props (tasking sheet save location)
+
+    private static string DefaultExportBaseDirectory =>
+        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+    private const string DefaultExportFolderName = "TaskingSheets";
+
+    private string _exportBaseDirectory;
+    public string ExportBaseDirectory
+    {
+        get => _exportBaseDirectory;
+        set
+        {
+            var dir = string.IsNullOrWhiteSpace(value) ? DefaultExportBaseDirectory : value.Trim();
+            if (SetProperty(ref _exportBaseDirectory, dir))
+            {
+                _appData.ExportBaseDirectory = dir;
+                PersistData();
+                OnPropertyChanged(nameof(EffectiveExportDirectory));
+            }
+        }
+    }
+
+    private string _exportFolderName;
+    public string ExportFolderName
+    {
+        get => _exportFolderName;
+        set
+        {
+            // validate folder name
+            var cleaned = new string((value ?? "")
+                .Where(c => !Path.GetInvalidFileNameChars().Contains(c))
+                .ToArray()).Trim();
+            var name = string.IsNullOrWhiteSpace(cleaned) ? DefaultExportFolderName : cleaned;
+            if (SetProperty(ref _exportFolderName, name))
+            {
+                _appData.ExportFolderName = name;
+                PersistData();
+                OnPropertyChanged(nameof(EffectiveExportDirectory));
+            }
+        }
+    }
+
+    public string EffectiveExportDirectory => Path.Combine(_exportBaseDirectory, _exportFolderName);
+
+    public ICommand BrowseExportDirectoryCommand { get; }
+    public ICommand ResetExportLocationCommand { get; }
+
+    private void BrowseExportDirectory()
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = "Select the base folder for tasking sheets",
+            InitialDirectory = Directory.Exists(_exportBaseDirectory)
+                ? _exportBaseDirectory
+                : DefaultExportBaseDirectory
+        };
+
+        if (dialog.ShowDialog() == true)
+            ExportBaseDirectory = dialog.FolderName;
+    }
+
+    private void ResetExportLocation()
+    {
+        ExportBaseDirectory = DefaultExportBaseDirectory;
+        ExportFolderName = DefaultExportFolderName;
     }
 
     //daily entry props
@@ -293,7 +372,7 @@ public class MainViewModel : BaseViewModel, IDisposable
         var endDate = DateOnly.FromDateTime(OverviewEndDate);
 
         var namePart = string.IsNullOrWhiteSpace(UserName) ? "" : $"_{UserName.Trim().Replace(" ", "_")}";
-        var exportDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "TaskingSheets");
+        var exportDir = EffectiveExportDirectory;
         Directory.CreateDirectory(exportDir);
         var dialog = new SaveFileDialog
         {

@@ -1,0 +1,63 @@
+<UserControl x:Class="Mainframe.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             Background="{StaticResource BgBase}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="16" MaxWidth="780" HorizontalAlignment="Left">
+            <TextBlock Text="SETTINGS" FontSize="13" FontWeight="Bold" Margin="0,0,0,12"
+                       Foreground="{StaticResource TextSecondary}" FontFamily="Consolas"/>
+
+            <!-- tasking sheet save location -->
+            <Border Background="{StaticResource BgSurface}"
+                    BorderBrush="{StaticResource BorderSubtle}" BorderThickness="1"
+                    CornerRadius="6" Padding="16">
+                <StackPanel>
+                    <TextBlock Text="TASKING SHEET SAVE LOCATION" FontSize="13" FontWeight="Bold"
+                               Margin="0,0,0,4" Foreground="{StaticResource TextPrimary}"
+                               FontFamily="Consolas"/>
+                    <TextBlock TextWrapping="Wrap" FontSize="12" Margin="0,0,0,16"
+                               Foreground="{StaticResource TextMuted}">
+                        Change where Exported tasking sheets (excel files) are saved. By default, they're saved to Documents/TaskingSheets.
+                    </TextBlock>
+
+                    <TextBlock Text="BASE DIRECTORY" FontSize="11" Foreground="{StaticResource TextMuted}"
+                               Margin="0,0,0,2" FontFamily="Consolas"/>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0" Padding="6,5"
+                                 Text="{Binding ExportBaseDirectory, UpdateSourceTrigger=LostFocus}"/>
+                        <Button Grid.Column="2" Content="BROWSE…" Padding="14,6"
+                                Command="{Binding BrowseExportDirectoryCommand}"
+                                Background="{StaticResource BgElevated}"/>
+                    </Grid>
+
+                    <TextBlock Text="FOLDER NAME" FontSize="11" Foreground="{StaticResource TextMuted}"
+                               Margin="0,0,0,2" FontFamily="Consolas"/>
+                    <TextBox Width="260" HorizontalAlignment="Left" Padding="6,5" Margin="0,0,0,16"
+                             Text="{Binding ExportFolderName, UpdateSourceTrigger=LostFocus}"/>
+
+                    <TextBlock Text="SHEETS WILL BE SAVED TO" FontSize="11"
+                               Foreground="{StaticResource TextMuted}" Margin="0,0,0,2"
+                               FontFamily="Consolas"/>
+                    <Border Background="{StaticResource BgDeep}" BorderBrush="{StaticResource BorderSubtle}"
+                            BorderThickness="1" CornerRadius="4" Padding="10,8" Margin="0,0,0,16">
+                        <TextBlock Text="{Binding EffectiveExportDirectory}" TextWrapping="Wrap"
+                                   FontFamily="Consolas" FontSize="12"
+                                   Foreground="{StaticResource AccentBrush}"/>
+                    </Border>
+
+                    <Button Content="RESET TO DEFAULT" HorizontalAlignment="Left" Padding="14,6"
+                            Command="{Binding ResetExportLocationCommand}"
+                            Background="{StaticResource BgElevated}"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -43,6 +43,22 @@ public class DataService : IDisposable
 
         using (var cmd = _connection.CreateCommand())
         {
+            cmd.CommandText = "SELECT Value FROM Settings WHERE Key = 'ExportBaseDirectory'";
+            var result = cmd.ExecuteScalar();
+            if (result is string exportBaseDir)
+                data.ExportBaseDirectory = exportBaseDir;
+        }
+
+        using (var cmd = _connection.CreateCommand())
+        {
+            cmd.CommandText = "SELECT Value FROM Settings WHERE Key = 'ExportFolderName'";
+            var result = cmd.ExecuteScalar();
+            if (result is string exportFolderName && !string.IsNullOrWhiteSpace(exportFolderName))
+                data.ExportFolderName = exportFolderName;
+        }
+
+        using (var cmd = _connection.CreateCommand())
+        {
             cmd.CommandText = "SELECT Id, Code, Description FROM ChargeCodes";
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
@@ -154,6 +170,22 @@ public class DataService : IDisposable
             cmd.Transaction = transaction;
             cmd.CommandText = "INSERT OR REPLACE INTO Settings (Key, Value) VALUES ('UserName', @value)";
             cmd.Parameters.AddWithValue("@value", data.UserName);
+            cmd.ExecuteNonQuery();
+        }
+
+        using (var cmd = _connection.CreateCommand())
+        {
+            cmd.Transaction = transaction;
+            cmd.CommandText = "INSERT OR REPLACE INTO Settings (Key, Value) VALUES ('ExportBaseDirectory', @value)";
+            cmd.Parameters.AddWithValue("@value", data.ExportBaseDirectory);
+            cmd.ExecuteNonQuery();
+        }
+
+        using (var cmd = _connection.CreateCommand())
+        {
+            cmd.Transaction = transaction;
+            cmd.CommandText = "INSERT OR REPLACE INTO Settings (Key, Value) VALUES ('ExportFolderName', @value)";
+            cmd.Parameters.AddWithValue("@value", data.ExportFolderName);
             cmd.ExecuteNonQuery();
         }
 

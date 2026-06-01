@@ -48,6 +48,9 @@
                 <TabItem Header="MANAGE">
                     <views:ManageView DataContext="{Binding}"/>
                 </TabItem>
+                <TabItem Header="SETTINGS">
+                    <views:SettingsView DataContext="{Binding}"/>
+                </TabItem>
             </TabControl>
         </Border>
     </DockPanel>
